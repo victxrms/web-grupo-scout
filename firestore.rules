@@ -1,0 +1,240 @@
+rules_version = '2';
+
+// Reglas de Firestore de la web del grupo. Son las que protegen los datos de
+// verdad: aunque alguien manipule la página, Firebase rechaza cualquier
+// lectura o escritura que no cumpla esto.
+//
+// Se publican con:  npx firebase deploy --only firestore:rules
+// (o copiando este fichero en Firebase Console → Firestore → Reglas).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══ Quién es quién ════════════════════════════════════════════════════
+    // Ver también src/lib/roles.ts (lo que se enseña en pantalla).
+
+    function conGoogle() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+    function correo() {
+      return request.auth.token.email.lower();
+    }
+    // Administradora inicial: la escribe `npm run configurar` (NO lo cambies a mano
+    // salvo que sepas lo que haces; debe coincidir con VITE_ADMIN_INICIAL).
+    function adminInicial() {
+      return correo() == 'ADMIN_INICIAL_SIN_CONFIGURAR'; // ← admin-inicial
+    }
+    function rutaMiembro() {
+      return /databases/$(database)/documents/miembros/$(correo());
+    }
+    function rutaAcceso() {
+      return /databases/$(database)/documents/web/acceso;
+    }
+    // Cuenta del dominio del grupo (si se ha configurado en Personas con acceso).
+    function delDominio() {
+      return exists(rutaAcceso())
+        && get(rutaAcceso()).data.get('dominio', '') != ''
+        && correo().split('@')[1] == get(rutaAcceso()).data.dominio;
+    }
+    function esAdmin() {
+      return conGoogle()
+        && (adminInicial() || (exists(rutaMiembro()) && get(rutaMiembro()).data.rol == 'admin'));
+    }
+    function esScouter() {
+      return conGoogle() && (adminInicial() || exists(rutaMiembro()) || delDominio());
+    }
+    function textoValido(s, min, max) {
+      return s is string && s.size() >= min && s.size() <= max;
+    }
+
+    // Personas con acceso al Kraal. ID = correo en minúsculas.
+    match /miembros/{email} {
+      allow get: if esAdmin() || (conGoogle() && email == correo());
+      allow list: if esAdmin();
+      allow create, update: if esAdmin()
+        && email == email.lower()
+        && email.matches('^[^@/ ]+@[^@/ ]+[.][^@/ ]+$')
+        && request.resource.data.keys().hasOnly(['nombre', 'rol', 'actualizado'])
+        && request.resource.data.rol in ['scouter', 'admin']
+        && textoValido(request.resource.data.get('nombre', ''), 0, 80)
+        && request.resource.data.actualizado == request.time;
+      allow delete: if esAdmin();
+    }
+
+    // ═══ Contenido de la web ═══════════════════════════════════════════════
+    // Lectura pública (lo enseña la web). Solo administradoras lo cambian.
+
+    match /web/contenido {
+      allow read: if true;
+      allow create, update: if esAdmin()
+        && request.resource.data.keys().hasOnly(['datos', 'version', 'actualizadoPor', 'actualizado'])
+        && request.resource.data.datos is string
+        && request.resource.data.datos.size() < 1000000
+        && request.resource.data.version == (resource == null ? 0 : resource.data.get('version', 0)) + 1
+        && request.resource.data.actualizadoPor == request.auth.token.email
+        && request.resource.data.actualizado == request.time;
+      allow delete: if false;
+    }
+
+    // Dominio del grupo: sus cuentas entran como scouters.
+    match /web/acceso {
+      allow read: if true;
+      allow create, update: if esAdmin()
+        && request.resource.data.keys().hasOnly(['dominio', 'actualizado'])
+        && request.resource.data.dominio is string
+        && (request.resource.data.dominio == ''
+            || request.resource.data.dominio.matches('^[a-z0-9-]+([.][a-z0-9-]+)+$'))
+        && request.resource.data.actualizado == request.time;
+      allow delete: if false;
+    }
+
+    // ═══ Patrullómetro ═════════════════════════════════════════════════════
+    // Lectura pública. Las scouters solo cambian los puntos; las
+    // administradoras crean, renombran y borran patrullas.
+
+    function patrullaValida() {
+      return textoValido(request.resource.data.nombre, 1, 40)
+        && textoValido(request.resource.data.emoji, 0, 16)
+        && request.resource.data.puntos is int;
+    }
+    match /patrullas/{patrulla} {
+      allow read: if true;
+      allow update: if (esScouter()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['puntos'])
+          && request.resource.data.puntos is int)
+        || (esAdmin()
+          && request.resource.data.keys().hasOnly(['nombre', 'emoji', 'puntos'])
+          && patrullaValida());
+      allow create: if esAdmin()
+        && patrulla.matches('^[a-z0-9-]{1,40}$')
+        && request.resource.data.keys().hasOnly(['nombre', 'emoji', 'puntos'])
+        && request.resource.data.keys().hasAll(['nombre', 'emoji', 'puntos'])
+        && patrullaValida()
+        && request.resource.data.puntos == 0;
+      allow delete: if esAdmin();
+    }
+
+    // Historial de cambios de puntos: solo se añaden entradas.
+    match /historial/{entrada} {
+      allow read: if true;
+      allow create: if esScouter()
+        && request.resource.data.keys().hasOnly(['patrulla', 'cambio', 'motivo', 'scouter', 'fecha'])
+        && request.resource.data.patrulla is string
+        && request.resource.data.cambio is int
+        && textoValido(request.resource.data.motivo, 1, 200)
+        && textoValido(request.resource.data.scouter, 1, 60)
+        && request.resource.data.fecha == request.time;
+      allow update: if false;
+      allow delete: if esAdmin();
+    }
+
+    // ═══ Asistencia y cuotas (/kraal/asistencia) ═══════════════════════════
+    // Datos de menores y de dinero: SOLO personas con acceso al Kraal.
+
+    function fechaValida(f) {
+      return f is string && f.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$');
+    }
+    function claveSeccionValida(s) {
+      return s is string && s.size() <= 60 && s.matches('^[a-z0-9]+(-[a-z0-9]+)*$');
+    }
+    function idEducandoValido(s) {
+      return s is string && s.matches('^[a-z0-9-]{1,100}$');
+    }
+    // Dinero en céntimos: de 0 a 1000 €.
+    function centimosValidos(n) {
+      return n is int && n >= 0 && n <= 100000;
+    }
+
+    // Listado de educandos (sale del Excel). Solo nombre, apellidos, sección e ID.
+    match /educandos/{id} {
+      allow read: if esScouter();
+      allow create, update: if esAdmin()
+        && idEducandoValido(id)
+        && request.resource.data.keys().hasOnly(['nombre', 'apellidos', 'seccion', 'seccionClave', 'idExcel', 'activo', 'actualizado'])
+        && request.resource.data.keys().hasAll(['nombre', 'apellidos', 'seccion', 'seccionClave', 'idExcel', 'activo', 'actualizado'])
+        && textoValido(request.resource.data.nombre, 1, 80)
+        && textoValido(request.resource.data.apellidos, 0, 120)
+        && textoValido(request.resource.data.seccion, 1, 60)
+        && claveSeccionValida(request.resource.data.seccionClave)
+        && textoValido(request.resource.data.idExcel, 0, 60)
+        && request.resource.data.activo is bool
+        && request.resource.data.actualizado == request.time;
+      // No se borran: las bajas se marcan con activo = false (se conserva el histórico).
+      // Para borrar de verdad (RGPD), desde la consola de Firebase.
+      allow delete: if false;
+    }
+
+    // Reunión: única por (sección, fecha) → el ID es "seccion_fecha".
+    // «version» sube de 1 en 1 en cada guardado: así la página detecta si otra
+    // persona ha guardado la reunión mientras la tenía abierta.
+    function reunionValida(rid) {
+      return esScouter()
+        && request.resource.data.keys().hasOnly(['seccion', 'seccionClave', 'fecha', 'version', 'actualizadoPor', 'actualizadoPorCorreo', 'actualizado'])
+        && request.resource.data.keys().hasAll(['seccion', 'seccionClave', 'fecha', 'version', 'actualizadoPor', 'actualizadoPorCorreo', 'actualizado'])
+        && claveSeccionValida(request.resource.data.seccionClave)
+        && fechaValida(request.resource.data.fecha)
+        && rid == request.resource.data.seccionClave + '_' + request.resource.data.fecha
+        && textoValido(request.resource.data.seccion, 1, 60)
+        && request.resource.data.version is int
+        && request.resource.data.actualizadoPor == request.auth.uid
+        && request.resource.data.actualizadoPorCorreo == request.auth.token.email
+        && request.resource.data.actualizado == request.time;
+    }
+    match /reuniones/{rid} {
+      allow read: if esScouter();
+      allow create: if reunionValida(rid) && request.resource.data.version == 1;
+      allow update: if reunionValida(rid) && request.resource.data.version == resource.data.get('version', 0) + 1;
+      allow delete: if esScouter();
+    }
+
+    // Asistencia, dinero recogido y cuota que tocaba (en céntimos) de un
+    // educando en una reunión.
+    // ID = "<reunión>__<educando>": volver a guardar SUSTITUYE, nunca duplica.
+    match /registrosAsistencia/{regId} {
+      allow read: if esScouter();
+      allow create, update: if esScouter()
+        && request.resource.data.keys().hasOnly(['reunionId', 'educandoId', 'seccionClave', 'fecha', 'asistio', 'pagado', 'cargo', 'trimestral', 'actualizadoPor', 'actualizado'])
+        && request.resource.data.keys().hasAll(['reunionId', 'educandoId', 'seccionClave', 'fecha', 'asistio', 'pagado', 'cargo', 'trimestral', 'actualizadoPor', 'actualizado'])
+        && claveSeccionValida(request.resource.data.seccionClave)
+        && fechaValida(request.resource.data.fecha)
+        && idEducandoValido(request.resource.data.educandoId)
+        && request.resource.data.reunionId == request.resource.data.seccionClave + '_' + request.resource.data.fecha
+        && regId == request.resource.data.reunionId + '__' + request.resource.data.educandoId
+        && request.resource.data.asistio is bool
+        && centimosValidos(request.resource.data.pagado)
+        && centimosValidos(request.resource.data.cargo)
+        && request.resource.data.trimestral is bool
+        && request.resource.data.actualizadoPor == request.auth.uid
+        && request.resource.data.actualizado == request.time;
+      allow delete: if esScouter();
+    }
+
+    // Ajustes: cuota de cada sección (mapa sección → {importe en céntimos,
+    // trimestral}) e ID del Excel del listado en Google Drive. Se guardan con
+    // merge: todos son opcionales. «importeCuota» es de la versión anterior.
+    match /ajustesAsistencia/{doc} {
+      allow read: if esScouter();
+      allow create, update: if esAdmin()
+        && doc == 'general'
+        && request.resource.data.keys().hasOnly(['importeCuota', 'cuotas', 'driveFileId', 'actualizado'])
+        && (request.resource.data.get('cuotas', null) == null
+            || (request.resource.data.cuotas is map && request.resource.data.cuotas.size() <= 30))
+        && (request.resource.data.get('importeCuota', null) == null
+            || (request.resource.data.importeCuota is number
+                && request.resource.data.importeCuota > 0
+                && request.resource.data.importeCuota <= 1000))
+        && (request.resource.data.get('driveFileId', null) == null
+            || (request.resource.data.driveFileId is string
+                && request.resource.data.driveFileId.matches('^[A-Za-z0-9_-]{10,200}$')))
+        && request.resource.data.actualizado == request.time;
+      allow delete: if false;
+    }
+
+    // Todo lo demás, cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

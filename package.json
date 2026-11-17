@@ -1,0 +1,27 @@
+{
+  "name": "web-grupo-scout",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "configurar": "node scripts/configurar.mjs",
+    "dev": "vite",
+    "build": "tsc && vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
+    "preview": "vite preview",
+    "reglas": "npx -y firebase-tools@15.5.1 deploy --only firestore:rules",
+    "test": "node --test \"tests/**/*.test.ts\""
+  },
+  "dependencies": {
+    "firebase": "^12.10.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.0"
+  }
+}

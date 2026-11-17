@@ -1,0 +1,45 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.*
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+
+# macOS resource forks
+._*
+._.DS_Store
+._.git
+._.gitignore
+
+# Build del prerenderizado
+dist-ssr/
+
+# Ejemplo de configuración (sí se sube)
+!.env.example

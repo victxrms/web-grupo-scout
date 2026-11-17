@@ -1,0 +1,106 @@
+{
+  "grupo": {
+    "nombre": "Grupo Scout Ejemplo 123",
+    "nombreCorto": "GS Ejemplo",
+    "lema": "¡Siempre listas!",
+    "ciudad": "Tu ciudad",
+    "provincia": "Tu provincia",
+    "email": "info@ejemplo.org",
+    "whatsapp": "",
+    "telefono": "",
+    "soloWhatsapp": true,
+    "sede": "Local del grupo",
+    "direccion": "Calle Ejemplo, 1",
+    "codigoPostal": "00000",
+    "mapsUrl": "",
+    "fichaInscripcionUrl": "",
+    "federacion": [
+      { "nombre": "Scouts de España", "url": "https://scout.es" }
+    ],
+    "redes": {
+      "instagram": "",
+      "youtube": "",
+      "facebook": "",
+      "tiktok": ""
+    }
+  },
+  "apariencia": {
+    "colorPrincipal": "#2F5D50",
+    "logo": "/logo.svg",
+    "fotosPortada": []
+  },
+  "inicio": {
+    "titulo": "Scouts en Tu ciudad",
+    "presentacion": "Somos un grupo scout de voluntariado educativo. Educamos en valores a niñas, niños y jóvenes a través del juego, la naturaleza y la vida en grupo.\n\nEdita este texto desde el **Kraal → Editar la web**."
+  },
+  "secciones": [
+    {
+      "id": "manada",
+      "nombre": "Manada",
+      "rama": "Lobatos",
+      "edades": "8 a 11 años",
+      "emoji": "🐺",
+      "texto": "Aprenden jugando: descubren la naturaleza, la vida en grupo y sus primeras acampadas a través del juego, las canciones y la imaginación."
+    },
+    {
+      "id": "tropa",
+      "nombre": "Tropa",
+      "rama": "Scouts",
+      "edades": "11 a 14 años",
+      "emoji": "⚜️",
+      "texto": "La aventura en patrullas: pequeños equipos que se organizan, reparten responsabilidades y compiten sanamente en el Patrullómetro."
+    },
+    {
+      "id": "unidad",
+      "nombre": "Unidad",
+      "rama": "Escultas",
+      "edades": "14 a 17 años",
+      "emoji": "🧭",
+      "texto": "Son ellas quienes proponen, preparan y evalúan sus actividades: travesías, proyectos propios y cada vez más autonomía."
+    },
+    {
+      "id": "clan",
+      "nombre": "Clan",
+      "rama": "Rovers",
+      "edades": "17 a 21 años",
+      "emoji": "🔥",
+      "texto": "La última etapa como educandas: servicio a los demás y proyecto personal."
+    }
+  ],
+  "unete": {
+    "intro": "Apuntarse es sencillo: te lo contamos en tres pasos.",
+    "pasos": [
+      { "titulo": "Escríbenos", "texto": "Mándanos un correo o un WhatsApp y cuéntanos qué edad tiene tu peque." },
+      { "titulo": "Ven a probar", "texto": "Si hay plaza en su sección, te contamos el horario y puede venir a alguna reunión sin compromiso." },
+      { "titulo": "Inscripción", "texto": "Si quiere quedarse, te explicamos cómo formalizar la inscripción y qué documentación hace falta." }
+    ],
+    "notaEdades": "Las edades son orientativas: el cambio de sección se hace por curso escolar.",
+    "voluntariado": "El grupo funciona gracias a sus voluntarias. Si eres mayor de edad y quieres formar parte del equipo de scouters, escríbenos."
+  },
+  "documentos": [],
+  "galeria": [],
+  "lugares": {
+    "mapaUrl": "",
+    "texto": "Lugares de acampada que conocemos. Los datos pueden estar desactualizados: confirma siempre antes de ir."
+  },
+  "herramientas": [],
+  "equipo": {
+    "intro": "El kraal es el equipo de scouters voluntarias que hace posible el grupo.",
+    "personas": []
+  },
+  "aviso": {
+    "activo": false,
+    "texto": "",
+    "enlace": "",
+    "textoEnlace": "Más información",
+    "hasta": ""
+  },
+  "paginas": {
+    "galeria": true,
+    "documentos": true,
+    "lugares": false,
+    "herramientas": false,
+    "equipo": false,
+    "patrullometro": true
+  }
+}

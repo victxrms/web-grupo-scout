@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo">
+  <!-- Logo de ejemplo: sustitúyelo por el de tu grupo (public/logo.svg o .png) -->
+  <circle cx="32" cy="32" r="30" fill="#2F5D50"/>
+  <path d="M32 12c4 6 9 9 9 17a9 9 0 0 1-18 0c0-8 5-11 9-17zm0 22a4 4 0 0 0-4 4v12h8V38a4 4 0 0 0-4-4z" fill="#fff"/>
+</svg>

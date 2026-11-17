@@ -1,0 +1,2 @@
+Sube aquí las fotos de la galería y la portada (por ejemplo acampada-1.jpg)
+y enlázalas en el editor como /fotos/acampada-1.jpg.
