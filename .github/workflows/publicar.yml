@@ -11,6 +11,8 @@ on:
 
 jobs:
   publicar:
+    # La plantilla original no se publica: solo las copias de cada grupo.
+    if: ${{ github.repository != 'victxrms/web-grupo-scout' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

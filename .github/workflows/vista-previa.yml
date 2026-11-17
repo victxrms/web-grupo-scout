@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   vista_previa:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    # Solo en las copias de cada grupo (la plantilla original no tiene Firebase).
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.repository != 'victxrms/web-grupo-scout' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
